@@ -149,7 +149,7 @@ vows.describe("Validating an invalid request").addBatch({
             return validates(validation, requestBody);
         },
 
-        'we get a DEFAULT error': function(topic) {
+        'we get a custom error': function(topic) {
             should.exist(topic);
             topic.should.be.a('object').and.have.property('badKey');
             topic.should.eql({ badKey:  "badKey is not okay since it's skree"});
