@@ -1,0 +1,21 @@
+{
+    "name": "loch",
+    "version": "0.1.0",
+    "description": "Validate before data hits the model.",
+    "main": "validator.js",
+    "keywords": [
+        "validation",
+        "api",
+        "contracts"
+    ],
+    "dependencies": {
+        "underscore": "1.5.2"
+    },
+    "devDependencies": {
+        "should": "1.3.0",
+        "vows": "0.7.0",
+        "ready.js": "3.0.0"
+    },
+    "author": "Isaac Hodes",
+    "license": "MIT"
+}
