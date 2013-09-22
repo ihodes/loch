@@ -2,15 +2,46 @@
 **Loch** offers a way to enforce your API at a level above your model,
 and return sane, helpful errors at the same time. 
 
-Specify what you expect to get from the users of your API, and tell
-them off when they don't do it right. 
+Specify, using data what you expect to get from the users of your API,
+and tell them off when they don't do it right. 
 
-The primary functionality of this library is with the function
-`validates`. You can find comprehensive documentation of the function
-below.
+#### Simple Usage
+
+For example, you might require the user to give a name with the
+current request, but they can choose whether or not to give an age:
+
+```javascript
+{ name: true, age: false }
+```
+
+Or you might require that they give a username with at least 5 chars,
+as well as a sex which may be either male, female, or other.
+
+```javascript
+{ username: [true,
+             function(val, key) { if (val.length > 4) return true;
+                                  else return key + " must be >= 5"}],
+  sex: [true, ['male', 'female', 'other']]}
+```
+
+Then validate the request parameters like so: 
+
+```javascript
+validates(validationMap, requestParams)
+```
+
+Which returns `true` if the request is valid, or else returns a map of
+keys and errors if the request is not valid.
+
+There are many built-in validators, and anything that is not built in
+can easily be added (as seen with the username validation above).
+
+You can find extensive documentation below.
 
 There is more documentation to come on auxillary functions, as well as
-more funtionality that is currently in the works. TBC.
+more funtionality that is currently in the works including
+whitelisting response maps, and more flexible built-in validation
+functions. TBC.
 
 ### Documentation 
 
@@ -21,6 +52,9 @@ meant to be easy-to-read as well.*
 
 Takes a validation object, `validation`, which is a map (which may be nested)
 of keys to requirements, and a request body (a map of request parameters).
+
+`requestBody` must be in the form of nested (or not) objects. Arrays are not 
+expected or handled (this is meant for use with HTTP-based APIs, for now).
 
 Returns `true` if the params meet the specification of `validation` otherwise
 returns an object containing the parameters which caused errors.
@@ -49,7 +83,7 @@ As an alternative to providing a validation function, you can say with true
 or false whether the key is required (above with `age`, `mother`, `father`):
 
 ```
-{ key:'required::Boolean }
+{ key: required::Boolean }
 ```
 
 In addition to providing validation function, the second element in the tuple
@@ -72,7 +106,7 @@ For example, if a value must be either 'true' or 'false', you could use:
 Which is functionally equivalent to:
 
 ```javascript
-   {key: [true, function(o) { return _.contains(['true', 'false'], o)}]}
+{ key: [true, function(o) { return _.contains(['true', 'false'], o)}] }
 ```
 
 #### Errors
@@ -89,7 +123,7 @@ For example:
 ```javascript
 { name: "name is required",
   ssn: "ssn must have exactly 9 digits",
-  parents: {sister: "sister is not a valid parameter" } }
+  parents: { sister: "sister is not a valid parameter" } }
 ```
 
 Or, if the value of parents had been a string instead of an object:
@@ -119,7 +153,9 @@ it will result in default error message "{keyname} is not accepted".
 
 ### Tests
 A test suite may be found in tests. It should be run with
-[`vows`](http://vowsjs.org/)`--spec`.
+[vows](http://vowsjs.org/). (I use `vows --spec`, because it's helpful).
+
+Tests are also a good source of example usage.
 
 ### Contributing
 Contributions are much appreciated. Please issue a pull request with a
