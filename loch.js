@@ -1,61 +1,6 @@
 'use strict';
 
-var _      = require('underscore');
-
-var TIME_REGEX = /^(0?\d|1\d|2[0123]):[012345]\d$/;
-
-
-var complement = function(fn) {
-    return function() {
-        return !fn.apply(null, _.toArray(arguments));
-    };
-};
-exports.complement = complement;
-
-// Recursively clones an object, returns the clone.
-var deepClone = function(base) {
-    base = _.clone(base);
-    return _.reduce(base, function(cloned, val, key) {
-        if(_.isObject(val)) return _.extend(cloned, o(key, deepClone(val)));
-        else return _.extend(cloned, o(key, val));
-    }, {});
-};
-exports.deepClone = deepClone;
-
-var object = function(k,v) { return _.object([k], [v]); };
-var existy = function(v) { return !(v === undefined) && !(v === null); };
-var falsey = function(v) { return !existy(v) || (v === false); };
-var truthy = function(v) { return !falsey(v); };
-var o = object;
-_.extend(exports, {object: object, existy: existy, falsey: falsey, truthy: truthy});
-
-// # Allower
-//
-// Returns a function which returns a recursively "cleaned" resource object;
-// only allowing through parameters which are on the whitelist.
-//
-// `allowed` is an object mapping allowed keys to either null (for "allow")
-// or subdocuments which need to be cleaned as well, or to functions which are
-// applied to the (value, key) to be returned and return an object to be merged
-// into the final object.
-//
-var allower = function(allowed) {
-    return function(object) {
-        var grabber = function(acc, val, key) {
-            if (!_.has(allowed, key))
-                return acc;
-            if (_.isObject(allowed[key]) && !_.isFunction(allowed[key]))
-                return _.extend(acc, o(key, allower(allowed[key])(val)));
-
-            if (_.isNull(allowed[key])) return _.extend(acc, o(key, val));
-
-            return _.extend(acc, allowed[key](val, key));
-        };
-        return _.reduce(object, grabber, {});
-    };
-};
-exports.allower = allower;
-
+var _ = require('underscore');
 
 
   ////////////////////////////
@@ -196,7 +141,7 @@ var validates = function(validation, requestBody) {
             else if (valResponse === false)
                 return _.extend(errors, o(key, DEFAULT(key)));
             else
-                return _.extend(errors, o(key, valResponse))
+                return _.extend(errors, o(key, valResponse));
         }
         else if (_.isObject(valid)) {
             if (!_.isObject(requestVal))
@@ -233,7 +178,6 @@ _.extend(exports, {MISSING: MISSING, CONTAIN: CONTAIN,
                    OBJECT: OBJECT, DEFAULT: DEFAULT, EXTRA: EXTRA});
 
 
-
   /////////////////////////
  // Validator functions //
 /////////////////////////
@@ -246,6 +190,7 @@ var isScalar = function(o, key) {
 exports.isScalar = isScalar;
 
 
+var TIME_REGEX = /^(0?\d|1\d|2[0123]):[012345]\d$/;
 var isTime = function(str, key) {
     if (TIME_REGEX.test(str))
         return true;
@@ -266,63 +211,64 @@ exports.oneOfer = oneOfer;
 
 
 
+  ///////////////////////////
+ // Response Whitelisting //
+///////////////////////////
 
-
-
-
-
-////////////////// needed?
-
-// Accepts a map of parameters representing the params `requested` of the route
-// and a map of params `expected`. `expected` is a map of expected keys to
-// validation functions (e.g. function(val){ return val%2 == 0; }).
+// # Allower
 //
-// If a value is 'null', defaults to the isScalar function, or `fn` if
-// supplied. If a value is an array, checks that the corresponing request's
-// value is in that array.
+// Returns a function which returns a recursively "cleaned" resource object;
+// only allowing through parameters which are on the whitelist.
 //
-// Returns true if the expectation is valid, otherwise false.
+// `allowed` is an object mapping allowed keys to either null (for "allow")
+// or subdocuments which need to be cleaned as well, or to functions which are
+// applied to the (value, key) to be returned and return an object to be merged
+// into the final object.
 //
-// e.g. request = { name: 'Jason', age: 22 },
-//      expects = { name: null, age: function(r){return r<25;}}
-//
-//      Will validate (return true).
-//
-var expects = function(request, expected, fn) {
-    if(!_.isFunction(fn)) fn = isScalar;
-    return _.every(expected, function(valid, key) {
-        if (!_.has(request, key)) return false;
-        if (_.isNull(valid)) return fn(request[key]);
-        if (_.isArray(valid)) return oneOfer(valid)(request[key]);
-        if (_.isFunction(valid)) return valid(request[key]);
-        return expects(request[key], valid);
-    });
+var allower = function(allowed) {
+    return function(object) {
+        var grabber = function(acc, val, key) {
+            if (!_.has(allowed, key))
+                return acc;
+            if (_.isObject(allowed[key]) && !_.isFunction(allowed[key]))
+                return _.extend(acc, o(key, allower(allowed[key])(val)));
+
+            if (_.isNull(allowed[key])) return _.extend(acc, o(key, val));
+
+            return _.extend(acc, allowed[key](val, key));
+        };
+        return _.reduce(object, grabber, {});
+    };
 };
-exports.expects = expects;
+exports.allower = allower;
 
 
-// Accepts a map of parameters representing the params `requested` of the route
-// and a map of params `allowed`. `allowed` is a map of allowed keys to
-// functions intended to validate their values.
-//
-// If a value is 'null', defaults to the isScalar function, or `fn` if
-// supplied. If a value is {} (the empty Object), all subparameters (nested
-// maps) are considered valid. If a value is an array, checks that the
-// corresponing request's value is in that array.
-//
-// Returns true if no more than the allowed params are in request, else false.
-//
-var allows = function(request, allowed, fn) {
-    if(!_.isFunction(fn)) fn = isScalar;
-    var extras = _.reject(request, function(val, key) {
-        var aval = allowed[key];
-        if (!_.has(allowed, key)) return false;
-        if (_.isNull(aval)) return fn(val);
-        if (_.isArray(aval)) return oneOfer(aval)(val);
-        if (_.isFunction(aval)) return aval(val);
-        if (_.isEmpty(aval)) return true;
-        return allows(val, aval);
-    });
-    return _.isEmpty(extras);
+  ///////////////
+ // Utilities //
+///////////////
+
+// Run-of-the-mill complement function
+var complement = function(fn) {
+    return function() {
+        return !fn.apply(null, _.toArray(arguments));
+    };
 };
-exports.allows = allows;
+exports.complement = complement;
+
+// Recursively clones an object, returns the clone.
+var deepClone = function(base) {
+    base = _.clone(base);
+    return _.reduce(base, function(cloned, val, key) {
+        if(_.isObject(val)) return _.extend(cloned, o(key, deepClone(val)));
+        else return _.extend(cloned, o(key, val));
+    }, {});
+};
+exports.deepClone = deepClone;
+
+// Things which I like to have around
+var object = function(k,v) { return _.object([k], [v]); };
+var existy = function(v) { return !(v === undefined) && !(v === null); };
+var falsey = function(v) { return !existy(v) || (v === false); };
+var truthy = function(v) { return !falsey(v); };
+var o = object;
+_.extend(exports, {object: object, existy: existy, falsey: falsey, truthy: truthy});
