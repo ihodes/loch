@@ -32,12 +32,12 @@ Requirements are tuples (arrays of length 2) of
 [required::Boolean, validator::function]. An example `validation` map might
 look like the follow.
 
-```javascriptjson
+```javascript
 {name: [true, atLeastOfLength(5)],
  age: false,
  parents: [false, { mother: false, father: false }]
  ssn: [false, function(o) { return containsNDigits(9); }]}
-```javascript
+```
 
 
 #### Validators (validation functions)
@@ -48,9 +48,9 @@ valid, else returns an error string (or false, for a default error message).
 As an alternative to providing a validation function, you can say with true
 or false whether the key is required (above with `age`, `mother`, `father`):
 
-```javascriptjson
-{ key: required::Boolean }
-```javascript
+```
+{ key:'required::Boolean }
+```
 
 In addition to providing validation function, the second element in the tuple
 may be another `validation` map, to which the rules above will be applied
@@ -65,15 +65,15 @@ Instead of a validation function you may use an array of values with which
 the value being validated  will be tested for inclusion within.
 For example, if a value must be either 'true' or 'false', you could use:
 
-```javascriptjson
-{ key: [true, ["true", "false"]] }
 ```javascript
+{ key: [true, ["true", "false"]] }
+```
 
 Which is functionally equivalent to:
 
 ```javascript
    {key: [true, function(o) { return _.contains(['true', 'false'], o)}]}
-```javascript
+```
 
 #### Errors
 
@@ -81,22 +81,22 @@ The error object which is returned when validation fails will look like the
 following:
 
 ```javascript
-{errorKey: "error message", ...}
-```javascript
+{ errorKey: "error message", ... }
+```
 
 For example:
 
 ```javascript
-{name: "name is required",
- ssn: "ssn must have exactly 9 digits",
- parents: {sister: "sister is not a valid parameter."}}
-```javascript
+{ name: "name is required",
+  ssn: "ssn must have exactly 9 digits",
+  parents: {sister: "sister is not a valid parameter" } }
+```
 
 Or, if the value of parents had been a string instead of an object:
 
 ```javascript
-{ parents: 'parents must be an object.'}
-```javascript
+{ parents: "parents must be an object" }
+```
 
 As you can see, the 'ssn' error is very informative. That is because of the way
 validation function are defined. Validation function must return true if the
@@ -127,3 +127,5 @@ description of your addition, along with rational behind it, and
 ideally some tests. Please make sure the tests pass. No breaking
 lochs, please.
 
+### Deps
+**loch** uses [underscore](http://underscorejs.org/). Underscore is lovely.
