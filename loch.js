@@ -6,110 +6,130 @@ var _ = require('underscore');
   ////////////////////////////
  //       Validation       //
 ////////////////////////////
-// # Validate
-//
 // `validation(validation, requestBody)`
-//
+
 // Takes a validation object, `validation`, which is a map (which may be nested)
 // of keys to requirements, and a request body (a map of request parameters).
-//
+
+// `requestBody` must be in the form of nested (or not) objects. Arrays are not
+// expected or handled (this is meant for use with HTTP-based APIs, for now).
+
 // Returns `true` if the params meet the specification of `validation` otherwise
 // returns an object containing the parameters which caused errors.
-//
-//
-// ## Validation Maps
-//
+
+
+// #### Validation Maps
+
 // Requirements are tuples (arrays of length 2) of
 // [required::Boolean, validator::function]. An example `validation` map might
 // look like the follow.
-//
-// ```json
-// {name: [true, atLeastOfLength(5)],
-//  age: false,
-//  parents: [false, { mother: false, father: false }]
-//  ssn: [false, function(o) { return containsNDigits(9); }]}
+
+// ```javascript
+// { name: [true, atLeastOfLength(5)],
+//   age: false,
+//   parents: [false, { mother: false, father: false }]
+//   ssn: [false, function(o) { return containsNDigits(9); }]}
 // ```
-//
-//
-// ## Validators (validation functions)
-//
+
+
+// #### Validators (validation functions)
+
 // A validation function takes in (val, key), and returns true if the value is
 // valid, else returns an error string (or false, for a default error message).
-//
+
 // As an alternative to providing a validation function, you can say with true
 // or false whether the key is required (above with `age`, `mother`, `father`):
-// 
-// ```json
+
+// ```
 // { key: required::Boolean }
 // ```
-//
+
 // In addition to providing validation function, the second element in the tuple
 // may be another `validation` map, to which the rules above will be applied
 // recursively (see `parents` key above).
-//
+
 // If the validation map is empty, all parameters will be allowed within it.
 // If you have certain requirements inside of *that* map (i.e. properties MUST
 // include some key and value, and then may allow whatever others), use a
 // helper function or create your own function.
-//
+
 // Instead of a validation function you may use an array of values with which
 // the value being validated  will be tested for inclusion within.
 // For example, if a value must be either 'true' or 'false', you could use:
-//
-// ```json
+
+// ```javascript
 // { key: [true, ["true", "false"]] }
 // ```
-//
+
 // Which is functionally equivalent to:
-//
+
+// ```javascript
+// { key: [true, function(o) { return _.contains(['true', 'false'], o)}] }
 // ```
-//    {key: [true, function(o) { return _.contains(['true', 'false'], o)}]}
+
+// However, if the array is instead of an (single) object, `validates` will
+// expect the request to include an array of objects, and will validate them
+// against that object.
+
+// To validate an array of scalars (that is, not an array of objects), you
+// might simply provide a custom validation function like so:
+
+// ```javascript
+// { someVals: [true, function(arr) {
+//                      if(!_.isArray(arr)) return false;
+//                      return _.every(arr, isScalar); }]}
 // ```
-//
-// ## Errors
-//
+
+// This is a common usage pattern, so we've provided a helper validation
+// function `isArrayOfScalar` that does just this (but also returns an useful
+// error message). You may also use `isAllOfArray`, which is a higher-order
+// validator in that it takes an array of `allowed` values, and returns a
+// validation function which only accepts an array with values which are in
+// `allowed`.
+
+// #### Errors
+
 // The error object which is returned when validation fails will look like the
 // following:
-//
+
+// ```javascript
+// { errorKey: "error message", ... }
 // ```
-// {errorKey: "error message", ...}
-// ```
-//
+
 // For example:
-//
+
+// ```javascript
+// { name: "name is required",
+//   ssn: "ssn must have exactly 9 digits",
+//   parents: { sister: "sister is not a valid parameter" } }
 // ```
-// {name: "name is required",
-//  ssn: "ssn must have exactly 9 digits",
-//  parents: {sister: "sister is not a valid parameter."}}
-// ```
-//
+
 // Or, if the value of parents had been a string instead of an object:
-//
+
+// ```javascript
+// { parents: "parents must be an object" }
 // ```
-// { parents: 'parents must be an object.'}
-// ```
-//
+
 // As you can see, the 'ssn' error is very informative. That is because of the way
 // validation function are defined. Validation function must return true if the
 // value is valid, else it must return a function which takes a key (the key being
 // validated), and returns a string which will be used as the error message.
-//
+
 // `false` may be used instead of a string, but then the default error message listed
 // for the param will be "{keyname} is not valid".
-//
+
 // If a key is required and is not provided, the default error message is "{keyname} is
 // required".
-//
+
 // If a value is supposed to be found in an array (using the array shortcut notation
 // above), the default error message is "{keyname} must be one of {*array}".
-//
+
 // If there is a key in the `requestBody` that does not appear in the validation map,
 // it will result in default error message "{keyname} is not accepted".
-//
 var validates = function(validation, requestBody) {
     // As we'll be removing permitted keys below to later allow
     // us to detect extraneous keys.
-    requestBody = deepClone(requestBody);
+    requestBody = deepCloneJSON(requestBody);
     var errorMaker2000 = function(errors, valid, key) {
         var required;
         if (valid.length === 2) {
@@ -119,6 +139,8 @@ var validates = function(validation, requestBody) {
             required = valid;
             valid = isScalar;
         }
+        if(!_.isBoolean(required)) throw new Error("required must be a boolean")
+
         // Handle absent keys...
         if (!required && !_.has(requestBody, key))
             return errors;
@@ -130,9 +152,20 @@ var validates = function(validation, requestBody) {
 
         // Assuming henceforth that the key exists in `requestBody`...
         if (_.isArray(valid)) {
-            var allowed = valid;
-            if (oneOfer(allowed)(requestVal) === true) return errors;
-            else return _.extend(errors, o(key, CONTAIN(key, allowed)));
+            if(_.isObject(valid[0])) { // need to validate the array of objects
+                var subErrs = true;
+                for (var idx in requestVal) {
+                    subErrs = validates(valid[0], requestVal[idx]);
+                    if (_.isObject(subErrs)) break; // short-circuit validation
+                }
+                if (subErrs === true) return errors;
+                else return _.extend(errors, o(key, subErrs));
+            }
+            else { // then we're testing for containment
+                var allowed = valid;
+                if (oneOfer(allowed)(requestVal) === true) return errors;
+                else return _.extend(errors, o(key, CONTAIN(key, allowed)));
+            }
         }
         else if (_.isFunction(valid)) {
             var valResponse = valid(requestVal, key);
@@ -210,6 +243,30 @@ var oneOfer = function(list) {
 exports.oneOfer = oneOfer;
 
 
+var isArrayOfScalars = function(arr, key) {
+    var errMsg = key + " must be an array of scalars";
+    if(!_.isArray(arr)) return errMsg;
+    if (_.every(arr, isScalar))
+        return true;
+    else
+        return errMsg;
+};
+exports.isArrayOfScalars = isArrayOfScalars;
+
+
+var isAllOfArray = function(allowed) {
+    return function(arr, key) {
+        var errMsg = key + " may only be any of " + allowed;
+        if(!_.isArray(arr)) return errMsg + ", and must be an array" ;
+        if (_.every(arr, function(el) { return _.contains(allowed, el); }))
+            return true;
+        else
+            return errMsg;
+    };
+}
+exports.isAllOfArray = isAllOfArray;
+
+
 
   ///////////////////////////
  // Response Whitelisting //
@@ -255,15 +312,12 @@ var complement = function(fn) {
 };
 exports.complement = complement;
 
-// Recursively clones an object, returns the clone.
-var deepClone = function(base) {
-    base = _.clone(base);
-    return _.reduce(base, function(cloned, val, key) {
-        if(_.isObject(val)) return _.extend(cloned, o(key, deepClone(val)));
-        else return _.extend(cloned, o(key, val));
-    }, {});
+// Recursively clones a valid JavaScript representation of a JSON object
+// and returns the clone.
+var deepCloneJSON = function(base) {
+    return JSON.parse(JSON.stringify(base)); // trololol.
 };
-exports.deepClone = deepClone;
+exports.deepCloneJSON = deepCloneJSON;
 
 // Things which I like to have around
 var object = function(k,v) { return _.object([k], [v]); };

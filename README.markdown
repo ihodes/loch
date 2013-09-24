@@ -1,9 +1,9 @@
 # Loch Down Your API
 **Loch** offers a way to enforce your API at a level above your model,
-and return sane, helpful errors at the same time. 
+and return sane, helpful errors at the same time.
 
 Specify, using data what you expect to get from the users of your API,
-and tell them off when they don't do it right. 
+and tell them off when they don't do it right.
 
 #### Simple Usage
 
@@ -24,7 +24,7 @@ as well as a sex which may be either male, female, or other.
   sex: [true, ['male', 'female', 'other']]}
 ```
 
-Then validate the request parameters like so: 
+Then validate the request parameters like so:
 
 ```javascript
 validates(validationMap, requestParams)
@@ -43,7 +43,7 @@ more funtionality that is currently in the works including
 whitelisting response maps, and more flexible built-in validation
 functions. TBC.
 
-### Documentation 
+### Documentation
 
 *This is a copy-paste of the docs included in the source; the source is
 meant to be easy-to-read as well.*
@@ -53,7 +53,7 @@ meant to be easy-to-read as well.*
 Takes a validation object, `validation`, which is a map (which may be nested)
 of keys to requirements, and a request body (a map of request parameters).
 
-`requestBody` must be in the form of nested (or not) objects. Arrays are not 
+`requestBody` must be in the form of nested (or not) objects. Arrays are not
 expected or handled (this is meant for use with HTTP-based APIs, for now).
 
 Returns `true` if the params meet the specification of `validation` otherwise
@@ -67,10 +67,10 @@ Requirements are tuples (arrays of length 2) of
 look like the follow.
 
 ```javascript
-{name: [true, atLeastOfLength(5)],
- age: false,
- parents: [false, { mother: false, father: false }]
- ssn: [false, function(o) { return containsNDigits(9); }]}
+{ name: [true, atLeastOfLength(5)],
+  age: false,
+  parents: [false, { mother: false, father: false }]
+  ssn: [false, function(o) { return containsNDigits(9); }]}
 ```
 
 
@@ -108,6 +108,26 @@ Which is functionally equivalent to:
 ```javascript
 { key: [true, function(o) { return _.contains(['true', 'false'], o)}] }
 ```
+
+However, if the array is instead of an (single) object, `validates` will
+expect the request to include an array of objects, and will validate them
+against that object.
+
+To validate an array of scalars (that is, not an array of objects), you
+might simply provide a custom validation function like so:
+
+```javascript
+{ someVals: [true, function(arr) {
+                     if(!_.isArray(arr)) return false;
+                     return _.every(arr, isScalar); }]}
+```
+
+This is a common usage pattern, so we've provided a helper validation
+function `isArrayOfScalar` that does just this (but also returns an useful
+error message). You may also use `isAllOfArray`, which is a higher-order
+validator in that it takes an array of `allowed` values, and returns a
+validation function which only accepts an array with values which are in
+`allowed`.
 
 #### Errors
 

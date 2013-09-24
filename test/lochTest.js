@@ -48,17 +48,38 @@ vows.describe('Validating a valid request').addBatch({
                               meh: false,
                               notRequired: [false, function(){return false;}],
                               subValidation: [true, {requiredKey: true,
-                                                    anotherReq: function(val, key){
-                                                        if(val == 'apple')
-                                                            return true;
-                                                        else
-                                                            return key + " is not tasty";
-                                                    }}],
+                                                     anotherReq: [true,
+                                                                  function(val, key){
+                                                                      if(val == 'apple')
+                                                                          return true;
+                                                                      else
+                                                                          return key + " is not tasty";
+                                                                  }]}],
                               specificString: [true, ['true', 'false', 'maybe']]}
             var requestBody = {requiredKey: 'applePie', meh: 'overachiever',
                                subValidation: {requiredKey: 'present',
                                                anotherReq: 'apple'},
                                specificString: 'true'};
+
+            return validates(validation, requestBody);
+        },
+
+        'the request validates (returns true)': function(topic) {
+            topic.should.be.true;
+        }
+    },
+    'when the request includes an array of subvalidations': {
+        topic: function() {
+            var validation = {messages: [true, [{name: true, text: true}]],
+                              lols: [true, [{funny: true}]],
+                              parents: [false, [{name: true,
+                                                 type: [true, ['mother', 'father']]}]],
+                              colors: [true, loch.isAllOfArray(['blue','red'])]};
+            var requestBody = {messages: [{name: 'yo', text: 'hello all'},
+                                          {name: 'hey', text: 'hey, people'}],
+                               lols:     [{funny: true}, {funny: false}],
+                               parents: [{name: "Daddy", type: 'father'}],
+                               colors: ['blue', 'red', 'red']};
 
             return validates(validation, requestBody);
         },
@@ -180,9 +201,25 @@ vows.describe("Validating an invalid request").addBatch({
         'the request returns a custom error (from validation function)': function(topic) {
             should.exist(topic);
             topic.should.be.a('object').and.have.property('subValidation');
-            topic.should.eql({ subValidation: 
+            topic.should.eql({ subValidation:
                                { anotherReq:  "anotherReq isn't tasty" }
                              });
+        }
+    },
+    'when the request includes an array of subvalidations, but the request is invalid': {
+        topic: function() {
+            var validation = {parents: [false, [{name: true,
+                                                 type: [true, ['mother', 'father']]}]]};
+            var requestBody = { parents: [{name: "Daddy", type: 'unknownOops'},
+                                          {name: "Mommy", type: 'mother'}] };
+
+            return validates(validation, requestBody);
+        },
+
+        'the request is not valid': function(topic) {
+            should.exist(topic);
+            topic.should.be.a('object').and.have.property('parents');
+            topic.should.eql({parents: {type: "type must be one of mother,father"}});
         }
     }
 }).export(module);
