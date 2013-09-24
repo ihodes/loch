@@ -5,6 +5,7 @@ var vows   = require('vows'),
 
 var validates = loch.validates;
 
+
 vows.describe('Validating a valid request').addBatch({
     'when req = val = {}': {
         topic: function() {
