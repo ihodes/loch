@@ -55,7 +55,7 @@ vows.describe('Validating a valid request').addBatch({
                                                                       else
                                                                           return key + " is not tasty";
                                                                   }]}],
-                              specificString: [true, ['true', 'false', 'maybe']]}
+                              specificString: [true, ['true', 'false', 'maybe']]};
             var requestBody = {requiredKey: 'applePie', meh: 'overachiever',
                                subValidation: {requiredKey: 'present',
                                                anotherReq: 'apple'},
@@ -189,7 +189,7 @@ vows.describe("Validating an invalid request").addBatch({
                                                             return k + " isn't tasty";
                                                      }]}
                                              ],
-                              specificString: [true, ['true', 'false', 'maybe']]}
+                              specificString: [true, ['true', 'false', 'maybe']]};
             var requestBody = {requiredKey: 'applePie', meh: 'overachiever',
                                subValidation: {requiredKey: 'present',
                                                anotherReq: 'toad'},

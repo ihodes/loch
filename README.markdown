@@ -181,9 +181,7 @@ Tests are also a good source of example usage.
 Contributions are much appreciated. Please issue a pull request with a
 description of your addition, along with rational behind it, and
 ideally some tests. Please make sure the tests pass. Also, you may want
-to run readyjs (or, rather, jshint) on the code to check for semicolons
-etc. I ignore some of the sillier output; so can you. But, no breaking
-lochs, please.
+to run jshint on the code.
 
 ### Deps
 **loch** uses [underscore](http://underscorejs.org/). Underscore is lovely.

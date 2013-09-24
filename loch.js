@@ -1,4 +1,8 @@
-'use strict';
+/*jslint node: true */
+(function() {
+// By Isaac Hodes (isaachodes@gmail.com)
+// 2013 MIT License
+"use strict";
 
 var _ = require('underscore');
 
@@ -139,7 +143,7 @@ var validates = function(validation, requestBody) {
             required = valid;
             valid = isScalar;
         }
-        if(!_.isBoolean(required)) throw new Error("required must be a boolean")
+        if(!_.isBoolean(required)) throw new Error("required must be a boolean");
 
         // Handle absent keys...
         if (!required && !_.has(requestBody, key))
@@ -257,13 +261,13 @@ exports.isArrayOfScalars = isArrayOfScalars;
 var isAllOfArray = function(allowed) {
     return function(arr, key) {
         var errMsg = key + " may only be any of " + allowed;
-        if(!_.isArray(arr)) return errMsg + ", and must be an array" ;
+        if(!_.isArray(arr)) return errMsg + ", and must be an array";
         if (_.every(arr, function(el) { return _.contains(allowed, el); }))
             return true;
         else
             return errMsg;
     };
-}
+};
 exports.isAllOfArray = isAllOfArray;
 
 
@@ -321,8 +325,9 @@ exports.deepCloneJSON = deepCloneJSON;
 
 // Things which I like to have around
 var object = function(k,v) { return _.object([k], [v]); };
-var existy = function(v) { return !(v === undefined) && !(v === null); };
+var existy = function(v) { return (v !== undefined) && (v !== null); };
 var falsey = function(v) { return !existy(v) || (v === false); };
 var truthy = function(v) { return !falsey(v); };
 var o = object;
 _.extend(exports, {object: object, existy: existy, falsey: falsey, truthy: truthy});
+}());
