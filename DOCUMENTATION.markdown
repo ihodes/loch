@@ -16,7 +16,7 @@ values in `json` and values being validation tuples (or a boolean).
 
 ```
 validationMap := { key: validationTuple | Boolean }
-valdationTuple := [Boolean, validator]
+valdationTuple := [Boolean, validator, ...]
 validator := Array<Scalar> | Function | [validationMap] | validationMap
 ```
 
@@ -27,6 +27,9 @@ of the corresponding key in `json` is contained in the array.
 If a validator is a Function, `validates` will check that the function
 applied to the value of the corresponding key in `json` returns
 `true`.
+
+You may have as many validation functions in that array. The first error
+returned will be reported.
 
 If a validator is an Array of an object, it will check that the value
 of the corresponding key in `json` is an array and that all the object

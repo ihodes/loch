@@ -31,6 +31,18 @@ vows.describe('Validating a valid request').addBatch({
             topic.should.be.true;
         }
     },
+    'when the validator has multiple validation functions for a single key': {
+        topic: function() {
+            var validation = {requiredKey: [true, loch.isScalar, function(v, k) { return v === 'b'; } ]};
+            var requestBody = {requiredKey: 'b'};
+
+            return validates(validation, requestBody);
+        },
+
+        'the request validates (returns true)': function(topic) {
+            topic.should.be.true;
+        }
+    },
     'when the request included all required keys, but not all possible keys': {
         topic: function() {
             var validation = {requiredKey: true, maybeKey: false};
@@ -119,6 +131,21 @@ vows.describe("Validating an invalid request").addBatch({
             should.exist(topic);
             topic.should.be.a('object').and.have.property('badKey');
             topic.should.eql({badKey: loch.EXTRA('badKey')});
+        }
+    },
+    'when the validator has multiple validation functions for a single key, but that val doesn\'t pass': {
+        topic: function() {
+            var validation = {badKey: [true, function(v, k) { if (v !== 'b') return k + " is not b"; else return true; },
+                                            loch.isScalar ]};
+            var requestBody = {badKey: [1,2,3]};
+
+            return validates(validation, requestBody);
+        },
+
+        'the request errors with the first error': function(topic) {
+            should.exist(topic);
+            topic.should.be.a('object').and.have.property('badKey');
+            topic.should.eql({badKey: 'badKey is not b'});
         }
     },
     'when the request must include keys with certain values, and does not': {

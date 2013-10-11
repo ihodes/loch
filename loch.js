@@ -2,7 +2,7 @@
 // By Isaac Hodes (isaachodes@gmail.com)
 // 2013 MIT License
 
-(function() { 
+(function() {
 "use strict";
 
 var _ = require('underscore');
@@ -18,10 +18,13 @@ var validates = function(validation, json) {
         var required;
         if (valid.length === 2) {
             required = valid[0];
-            valid = valid[1];
+            valid    = valid[1];
+        } else if (valid.length > 2) {
+            required = valid[0];
+            valid    = juxt.apply(null, valid.slice(1));
         } else {
             required = valid;
-            valid = isScalar;
+            valid    = isScalar;
         }
         if(!_.isBoolean(required)) throw new Error("required must be a boolean");
 
@@ -34,10 +37,11 @@ var validates = function(validation, json) {
         var paramVal = params[key];
         delete params[key];
 
+        var subErrs;
         // Assuming henceforth that the key exists in `params`...
         if (_.isArray(valid)) {
             if(_.isObject(valid[0])) { // need to validate the array of objects
-                var subErrs = true;
+                subErrs = true;
                 for (var idx in paramVal) {
                     subErrs = validates(valid[0], paramVal[idx]);
                     if (_.isObject(subErrs)) break; // short-circuit validation
@@ -53,12 +57,17 @@ var validates = function(validation, json) {
         }
         else if (_.isFunction(valid)) {
             var valResponse = valid(paramVal, key);
-            if (valResponse === true)
+            if (_.isArray(valResponse)) { // then we were passed a list of validation functions, so we need to check for any errors from any of them
+                subErrs = _.filter(valResponse, function(val) { return falsey(val) || _.isString(val); });
+                if (_.isEmpty(subErrs)) return errors;
+                else return _.extend(errors, o(key, _.first(subErrs)));
+            } else if (valResponse === true) {
                 return errors;
-            else if (valResponse === false)
+            } else if (valResponse === false) {
                 return _.extend(errors, o(key, DEFAULT(key)));
-            else
+            } else {
                 return _.extend(errors, o(key, valResponse));
+            }
         }
         else if (_.isObject(valid)) {
             if (!_.isObject(paramVal))
@@ -92,7 +101,6 @@ var OBJECT  = function(key) { return key + ' must be an object'; };
 var DEFAULT = function(key) { return key + ' is not valid'; };
 
 
-
 var allower = function(allowed) {
     return function(object) {
         var grabber = function(acc, val, key) {
@@ -115,39 +123,35 @@ var allower = function(allowed) {
  // Built-in validator functions //
 //////////////////////////////////
 
-var isScalar = function(o, key) {
-    if (!(_.isObject(o) || _.isArray(o) || _.isArguments(o)))
-        return true;
-    return key + " must be a scalar";
-};
-
-
-var TIME_REGEX = /^(0?\d|1\d|2[0123]):[012345]\d$/;
-var isTime = function(str, key) {
-    if (TIME_REGEX.test(str))
-        return true;
-    return key + " must be a valid time";
-};
-
-
-var oneOfer = function(list) {
-    if(arguments.length > 1) list = _.toArray(arguments);
-    return function(el, key) {
-        if (_.contains(list, el))
-            return true;
-        return key + " must be one of " + list;
+/// Creats a validator function from a fn which returns true/false.
+// err is a string; if {{key}} is in the string, it will be replaced by the key
+var validator = function(err, fn)  {
+    return function(val, key) {
+        if (truthy(fn(val))) return true;
+        else return err.replace('{{key}}', key);
     };
 };
 
 
-var isArrayOfScalars = function(arr, key) {
-    var errMsg = key + " must be an array of scalars";
-    if(!_.isArray(arr)) return errMsg;
-    if (_.every(arr, isScalar))
-        return true;
-    else
-        return errMsg;
+var isScalar = validator("{{key}} must be a scalar", function(val) {
+    return !_.some(juxt(_.isObject, _.isArray, _.isArguments)(val));
+});
+
+
+var TIME_REGEX = /^(0?\d|1\d|2[0123]):[012345]\d$/;
+var isTime = validator("{{key}} must be a valid time", _.partial(invoke, TIME_REGEX, 'test'));
+
+
+var oneOfer = function(list) {
+    if(arguments.length > 1) list = _.toArray(arguments);
+    return validator("{{key}} must be one of"+list, _.partial(_.contains, list));
 };
+
+
+var isArrayOfScalars = validator("{{key}} must be an array of scalars", function(val) {
+    if (!_.isArray(arr)) return false;
+    return _.every(arr, _.compose(function(v) { return v === true; }, isScalar));
+});
 
 
 var isAllOfArray = function(allowed) {
@@ -169,6 +173,23 @@ var isAllOfArray = function(allowed) {
 
 var complement = function(fn) {
     return function() { return !fn.apply(null, _.toArray(arguments)); };
+};
+
+var juxt = function(/* fns */) {
+    var fns = _.toArray(arguments);
+    return function(/* args */) {
+        var args = _.toArray(arguments);
+        return _.map(fns, function(fn) {
+            return fn.apply(fn, args);
+        });
+    };
+};
+
+var drop = function(n, arr) { return arr.slice(n); };
+
+var invoke = function(obj, methodname /* args */) {
+    var args = drop(2, _.toArray(arguments));
+    if (existy(obj[methodname])) return obj[methodname].apply(obj, args);
 };
 
 var deepCloneJSON = function(base) {

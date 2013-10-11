@@ -1,6 +1,6 @@
 {
     "name": "loch",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "description": "loch down your API before the data hits your models",
     "main": "loch.js",
     "homepage": "https://github.com/ihodes/loch",
