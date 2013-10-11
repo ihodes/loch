@@ -215,6 +215,7 @@ exports.isTime = isTime;
 exports.oneOfer = oneOfer;
 exports.isArrayOfScalars = isArrayOfScalars;
 exports.isAllOfArray = isAllOfArray;
+exports.validator = validator;
 _.extend(exports, {MISSING: MISSING, CONTAIN: CONTAIN,
                    OBJECT: OBJECT, DEFAULT: DEFAULT, EXTRA: EXTRA});
 

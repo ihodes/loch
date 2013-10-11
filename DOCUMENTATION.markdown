@@ -56,6 +56,17 @@ A validation function is passed `val, key`, and is expected to return
 true if the value validates, else it should return an error string (or
 false, for the `DEFAULT` error message).
 
+You can create validation functions with `validator`. Just pass it an 
+error message (in which "{{key}}" will be replaced with the key being
+validated), and the function with which to test the value. Should the
+function, when applied to the value, return `true`, the error message
+won't be returned (and `true` will); else the error message will be
+returned.
+
+For example: 
+
+    isStringValFn = validator("{{key}} must be a String", _.isString)
+
 ## Errors
 
 Errors returned by validates will be in the form of nested objects,

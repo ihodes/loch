@@ -1,7 +1,8 @@
 var vows   = require('vows'),
     assert = require('assert'),
     should = require('should'),
-    loch   = require('../loch');
+    loch   = require('../loch'),
+    _      = require('underscore');
 
 var validates = loch.validates;
 
@@ -248,6 +249,32 @@ vows.describe("Validating an invalid request").addBatch({
             should.exist(topic);
             topic.should.be.a('object').and.have.property('parents');
             topic.should.eql({parents: {type: "type must be one of mother,father"}});
+        }
+    }
+}).export(module);
+
+
+vows.describe('Auxiliary function').addBatch({
+    'when the validator-created validation function fails': {
+        topic: function() {
+            var vfn = loch.validator("{{key}} is not dumb", _.isString)
+            return vfn(1, 'applePie');
+        },
+
+        'the error should have the right information in it': function(topic) {
+            should.exist(topic);
+            topic.should.be.a('string');
+            topic.should.eql("applePie is not dumb");
+        }
+    },
+    'when the validator-created validation function passed': {
+        topic: function() {
+            var vfn = loch.validator("{{key}} is not dumb", _.isString)
+            return vfn('delicious', 'applePie');
+        },
+
+        'it should return true': function(topic) {
+            topic.should.be.true;
         }
     }
 }).export(module);
