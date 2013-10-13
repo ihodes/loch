@@ -1,4 +1,5 @@
 # Loch Down Your API
+[![NPM](https://nodei.co/npm/loch.png)](https://nodei.co/npm/loch/)
 
 **Loch offers a way to enforce your API** at a level above your model,
 and return sane, helpful errors at the same time. The functions included
